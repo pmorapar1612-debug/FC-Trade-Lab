@@ -1,447 +1,617 @@
 
+from pathlib import Path
+
+html = r'''<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#10131d">
+<title>FC Trade Lab</title>
 <style>
-/* Ampliación FC Trade Lab: nuevas funciones */
-#cheapOpportunities .player,
-#activeResults .player {
-  cursor: pointer;
-  transition: border-color .18s, transform .18s;
+:root {
+  color-scheme: dark;
+  --bg:#10131d; --panel:#1a2030; --line:#30394d;
+  --text:#f4f6ff; --muted:#a8b2c8;
+  --green:#55e6a5; --blue:#82aaff; --red:#ff808c;
 }
-#cheapOpportunities .player:hover,
-#activeResults .player:hover {
-  border-color: var(--green);
-  transform: translateY(-2px);
+* { box-sizing:border-box }
+body {
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:system-ui,-apple-system,sans-serif;
 }
-#cheapOpportunities .player:focus,
-#activeResults .player:focus {
-  outline: 2px solid var(--green);
-  outline-offset: 2px;
+main { max-width:1100px; margin:auto; padding:22px 15px 50px }
+header { margin-bottom:22px }
+h1 { margin:0; font-size:30px; letter-spacing:-1px }
+h1 span { color:var(--green) }
+h2 { font-size:18px; margin:0 0 14px }
+h3 { font-size:15px }
+.subtitle,.status { color:var(--muted); font-size:13px; line-height:1.6 }
+.panel {
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:16px; padding:17px; margin-bottom:16px;
 }
-.route-grid {
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:10px;
+.settings {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;
 }
-.route-step {
-  padding:13px;
-  background:#111725;
+label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px }
+input,select,button { font:inherit; border-radius:10px; padding:12px }
+input,select {
+  width:100%; background:#111725; color:var(--text);
   border:1px solid var(--line);
-  border-radius:12px;
-  margin-bottom:10px;
 }
-.route-step h3 { font-size:14px; margin:0 0 9px }
-.route-step p {
-  font-size:13px;
-  line-height:1.6;
-  margin:5px 0;
-  overflow-wrap:anywhere;
+button { background:var(--green); color:#07150e; border:0; font-weight:800; cursor:pointer }
+button:disabled { opacity:.55; cursor:wait }
+.actions { display:flex; gap:10px; margin-top:13px }
+.actions button { flex:1 }
+button.secondary { background:#293247; color:var(--text) }
+.mode-switch {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;
 }
-.route-highlight { color:var(--green); font-weight:800 }
+.mode-btn {
+  background:#111725; color:var(--muted);
+  border:1px solid var(--line); padding:13px 8px;
+}
+.mode-btn.active { background:var(--green); color:#07150e; border-color:var(--green) }
+.stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px }
+.stat { background:#111725; padding:13px; border-radius:12px; min-width:0 }
+.stat small { color:var(--muted); display:block; font-size:11px }
+.stat strong { display:block; margin-top:5px; font-size:18px; overflow-wrap:anywhere }
+.cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.player {
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:15px; padding:15px; min-width:0;
+  cursor:pointer; transition:border-color .15s, transform .15s;
+}
+.player:hover,.player:focus { border-color:var(--green); outline:none }
+.player:hover { transform:translateY(-2px) }
+.player:focus-visible { box-shadow:0 0 0 2px var(--green) }
+.player-top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start }
+.player h3 { margin:0; font-size:17px; overflow-wrap:anywhere }
+.rating { color:var(--blue); font-weight:800; white-space:nowrap }
+.tag {
+  display:inline-block; margin-top:7px; font-size:10px;
+  padding:4px 7px; border-radius:6px; background:#283348; color:#cbd6ee;
+}
+.metrics { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px }
+.metric { background:#111725; border-radius:10px; padding:10px; min-width:0 }
+.metric small { display:block; color:var(--muted); font-size:11px; margin-bottom:5px }
+.metric strong { font-size:14px; overflow-wrap:anywhere }
+.green,.profit { color:var(--green) }
+.red { color:var(--red) }
+.card-foot {
+  border-top:1px solid var(--line); margin-top:12px; padding-top:12px;
+  font-size:12px; color:var(--muted); line-height:1.7;
+}
+.section-title { margin:24px 0 12px }
+.empty { color:var(--muted); text-align:center; padding:25px 10px; grid-column:1/-1; line-height:1.6 }
+.note { color:var(--muted); font-size:12px; line-height:1.7; margin-top:18px }
+.route-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:14px 0 }
+.route-step { background:#111725; border:1px solid var(--line); border-radius:12px; padding:13px; margin:10px 0 }
+.route-step h3 { margin:0 0 8px }
+.route-step p { margin:6px 0; font-size:13px; line-height:1.6; overflow-wrap:anywhere }
 .route-warning { color:var(--muted); font-size:12px; line-height:1.7 }
-@media(max-width:500px) {
-  .route-grid { grid-template-columns:1fr }
+.inline-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px }
+.inline-actions button { flex:1 }
+[hidden] { display:none !important }
+@media(max-width:650px) {
+  .cards { grid-template-columns:1fr }
+  .stats,.route-grid { grid-template-columns:1fr }
+  .actions { flex-direction:column }
+  h1 { font-size:27px }
 }
+@media(max-width:380px) { .settings { grid-template-columns:1fr } }
 </style>
+</head>
+<body>
+<main>
+<header>
+  <h1>FC <span>Trade Lab</span></h1>
+  <div class="subtitle">Ultimate Team · PlayStation 5 · Tradeo por media</div>
+</header>
+
+<section class="panel">
+  <h2>Elige tu método</h2>
+  <div class="mode-switch">
+    <button id="modeSnipe" class="mode-btn active" type="button">⚡ Modo Sniping</button>
+    <button id="modeBid" class="mode-btn" type="button">🎯 Modo Pujas</button>
+  </div>
+  <div id="modeDescription" class="subtitle">Prioridad a cartas de mayor media que entren en tu presupuesto.</div>
+</section>
+
+<section class="panel">
+  <h2>⚙️ Configuración</h2>
+  <div class="settings">
+    <div>
+      <label for="budget">Presupuesto total</label>
+      <input id="budget" type="number" min="0" step="1000" value="30000">
+    </div>
+    <div>
+      <label for="reserve">Monedas reservadas</label>
+      <input id="reserve" type="number" min="0" step="1000" value="0">
+    </div>
+    <div>
+      <label for="minRating">Media mínima</label>
+      <input id="minRating" type="number" min="0" max="99" value="80">
+    </div>
+    <div>
+      <label for="maxPrice">Compra máxima por jugador</label>
+      <input id="maxPrice" type="number" min="0" step="500" value="30000">
+    </div>
+    <div>
+      <label for="discount">Descuento para pujas (%)</label>
+      <input id="discount" type="number" min="1" max="90" value="10">
+    </div>
+    <div>
+      <label for="snipeDiscount">Descuento para sniping (%)</label>
+      <input id="snipeDiscount" type="number" min="1" max="90" value="15">
+    </div>
+    <div>
+      <label for="sort">Ordenar resultados</label>
+      <select id="sort">
+        <option value="rating">Mayor media primero</option>
+        <option value="profit">Mayor beneficio estimado</option>
+        <option value="roi">Mayor rentabilidad</option>
+        <option value="price">Menor precio objetivo</option>
+      </select>
+    </div>
+    <div>
+      <label for="limit">Jugadores a mostrar</label>
+      <select id="limit">
+        <option value="10">10 jugadores</option>
+        <option value="20">20 jugadores</option>
+        <option value="30" selected>30 jugadores</option>
+        <option value="50">50 jugadores</option>
+      </select>
+    </div>
+  </div>
+  <div class="actions">
+    <button id="refresh">Actualizar precios</button>
+    <button id="recalculate" class="secondary">Aplicar filtros</button>
+  </div>
+  <div id="status" class="status">Esperando datos del mercado…</div>
+</section>
+
+<section class="panel">
+  <h2>📊 Resumen</h2>
+  <div class="stats">
+    <div class="stat"><small>Presupuesto disponible</small><strong id="available">30.000</strong></div>
+    <div class="stat"><small>Jugadores compatibles</small><strong id="activeCount">0</strong></div>
+    <div class="stat"><small>Beneficio estimado superior</small><strong id="bestProfit">—</strong></div>
+  </div>
+</section>
+
+<div class="section-title">
+  <h2 id="resultsTitle">⚡ Objetivos de sniping</h2>
+  <div id="resultsSubtitle" class="subtitle">Cartas de mayor media dentro del presupuesto.</div>
+</div>
+<section id="activeResults" class="cards">
+  <div class="empty">Pulsa «Actualizar precios» para comenzar.</div>
+</section>
 
 <section class="panel section-title" id="cheapPanel">
   <h2>💎 Oportunidades baratas y populares</h2>
-  <p class="subtitle">
-    Jugadores económicos compatibles con tu presupuesto.
-    La popularidad solo se mostrará como verificada si la fuente proporciona datos.
-  </p>
-  <div id="cheapOpportunities" class="cards">
+  <p class="subtitle">Jugadores económicos que pueden interesar para tradear. La demanda solo se marcará como verificada si la fuente proporciona datos reales.</p>
+  <section id="cheapResults" class="cards">
     <div class="empty">Actualiza los precios para buscar oportunidades.</div>
-  </div>
+  </section>
 </section>
 
 <section class="panel" id="routePanel" hidden>
   <h2>🗺️ Hoja de ruta de inversión</h2>
-  <p class="subtitle" id="routePlayer"></p>
-  <div class="route-grid" id="routeSummary"></div>
-  <h3>Plan de compra y venta</h3>
+  <p id="routePlayer" class="subtitle"></p>
+  <div id="routeSummary" class="route-grid"></div>
+  <h3>Plan paso a paso</h3>
   <div id="routeSteps"></div>
-  <p class="route-warning">
-    Estimaciones sujetas a la disponibilidad de cartas, el resultado de las pujas
-    y las variaciones del mercado. El cálculo supone que se venden todas las
-    cartas al precio indicado; no garantiza que eso ocurra.
-  </p>
-  <button type="button" class="secondary" id="closeRoute">
-    Cerrar hoja de ruta
-  </button>
+  <p class="route-warning">Los precios y beneficios son estimaciones. No se garantiza ganar las pujas ni vender todas las cartas al precio previsto. El cálculo supone que todas se venden al precio estimado.</p>
+  <div class="inline-actions">
+    <button id="closeRoute" class="secondary" type="button">Cerrar hoja de ruta</button>
+  </div>
 </section>
 
+<p class="note">
+  El precio de mercado es una referencia y no garantiza que exista una carta disponible a ese precio.
+  La venta estimada descuenta el 5 % de comisión. La media alta no implica que sea más fácil ganar una puja.
+  Los datos de popularidad requieren una fuente que los proporcione. La app no compra ni puja automáticamente.
+</p>
+</main>
+
 <script>
-(() => {
-  "use strict";
+"use strict";
 
-  let selectedPlayer = null;
+/* Sustituye esta URL por la URL real y verificada de tu proveedor de precios. */
+const API_URL = "https://fc27-market.val.run/latest";
+const TAX = 0.05;
 
-  const money = n =>
-    Number.isFinite(n)
-      ? Math.round(n).toLocaleString("es-ES") + " monedas"
-      : "—";
+let players = [];
+let currentMode = "snipe";
+let selectedPlayerKey = null;
 
-  const safe = value => escapeHTML(value);
+const $ = id => document.getElementById(id);
 
-  function getTarget(p) {
-    return currentMode === "bid"
-      ? p.bidTarget
-      : p.snipeTarget;
+function coins(n) {
+  if (!Number.isFinite(n)) return "—";
+  return Math.round(n).toLocaleString("es-ES") + " monedas";
+}
+function num(id, fallback = 0) {
+  const n = Number($(id).value);
+  return Number.isFinite(n) ? Math.max(0, n) : fallback;
+}
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  })[c]);
+}
+function playerKey(p) {
+  return String(p.eaId ?? p.id ?? `${p.name}-${p.rating}`);
+}
+function priceStep(price) {
+  if (price <= 1000) return 50;
+  if (price <= 10000) return 100;
+  if (price <= 50000) return 250;
+  if (price <= 100000) return 500;
+  return 1000;
+}
+function roundDown(price) {
+  if (!Number.isFinite(price) || price <= 0) return 0;
+  const step = priceStep(price);
+  return Math.floor(price / step) * step;
+}
+
+/* Acepta una lista directa, players o grupos. Conserva datos originales de la API. */
+function normalizePlayers(data) {
+  let source = [];
+  if (Array.isArray(data)) source = data;
+  else if (data && Array.isArray(data.players)) source = data.players;
+  else if (data && data.groups && typeof data.groups === "object") {
+    source = Object.values(data.groups).flatMap(group => Array.isArray(group) ? group : []);
   }
 
-  function getProfit(p) {
-    return currentMode === "bid"
-      ? p.bidProfit
-      : p.snipeProfit;
+  const unique = new Map();
+  for (const p of source) {
+    const name = p.name ?? p.playerName ?? p.commonName ?? "Jugador";
+    const rating = Number(p.rating ?? p.overall ?? p.media);
+    const price = Number(p.price ?? p.marketPrice ?? p.psPrice);
+    if (!Number.isFinite(price) || price <= 0) continue;
+
+    const id = String(p.eaId ?? p.id ?? `${name}-${rating}`);
+    if (unique.has(id)) continue;
+
+    unique.set(id, {
+      ...p,
+      id: p.id ?? id,
+      name: String(name),
+      rating: Number.isFinite(rating) ? rating : 0,
+      price,
+      forecast: p.forecast
+    });
   }
+  return [...unique.values()];
+}
 
-  function getSalePrice(p) {
-    const forecast = Array.isArray(p.forecast)
-      ? Number(p.forecast[0])
-      : Number(p.forecast);
-
-    return Number.isFinite(forecast) && forecast > 0
-      ? forecast
-      : p.price;
-  }
-
-  function getUsageInfo(p) {
-    const fields = [
-      "popularity", "usage", "pickRate",
-      "playRate", "selectionRate", "demand",
-      "popularityScore"
-    ];
-
-    for (const field of fields) {
-      const value = p[field];
-
-      if (value !== undefined && value !== null && value !== "") {
-        return {
-          verified: true,
-          text: "Dato de popularidad: " + String(value)
-        };
-      }
+function salePrice(p) {
+  const raw = Array.isArray(p.forecast) ? Number(p.forecast[0]) : Number(p.forecast);
+  return Number.isFinite(raw) && raw > 0 ? raw : p.price;
+}
+function usageInfo(p) {
+  const fields = [
+    "popularity", "usage", "pickRate", "playRate",
+    "selectionRate", "demand", "popularityScore"
+  ];
+  for (const field of fields) {
+    const v = p[field];
+    if (v !== undefined && v !== null && v !== "") {
+      return { verified: true, text: `${field}: ${String(v)}` };
     }
+  }
+  return { verified: false, text: "Uso/demanda no verificados" };
+}
+function targetFor(p) {
+  return currentMode === "bid" ? p.bidTarget : p.snipeTarget;
+}
+function profitFor(p) {
+  return currentMode === "bid" ? p.bidProfit : p.snipeProfit;
+}
 
+function calculateRecommendations() {
+  const budget = num("budget");
+  const reserve = num("reserve");
+  const available = Math.max(0, budget - reserve);
+  const maxPrice = num("maxPrice", budget);
+  const minRating = num("minRating");
+  const bidDiscount = Math.min(90, Math.max(1, num("discount", 10)));
+  const snipeDiscount = Math.min(90, Math.max(1, num("snipeDiscount", 15)));
+  const limit = num("limit", 30);
+
+  $("available").textContent = coins(available);
+
+  const ranked = players.filter(p => p.rating >= minRating).map(p => {
+    const market = p.price;
+    const bidTarget = roundDown(market * (1 - bidDiscount / 100));
+    const snipeTarget = roundDown(market * (1 - snipeDiscount / 100));
+    const forecastValue = Array.isArray(p.forecast) ? Number(p.forecast[0]) : Number(p.forecast);
+    const hasForecast = Number.isFinite(forecastValue) && forecastValue > 0;
+    const sellPrice = hasForecast ? forecastValue : market;
+    const netSale = Math.floor(sellPrice * (1 - TAX));
+    const bidProfit = netSale - bidTarget;
+    const snipeProfit = netSale - snipeTarget;
+    const bidROI = bidTarget > 0 ? bidProfit / bidTarget * 100 : 0;
+    const snipeROI = snipeTarget > 0 ? snipeProfit / snipeTarget * 100 : 0;
     return {
-      verified: false,
-      text: "Demanda y uso no verificados por la fuente"
+      ...p, market, bidTarget, snipeTarget, sellPrice, hasForecast,
+      bidProfit, snipeProfit, bidROI, snipeROI
     };
+  });
+
+  const eligible = (p, target) => target > 0 && target <= available && target <= maxPrice;
+  let results = ranked.filter(p => eligible(p, currentMode === "bid" ? p.bidTarget : p.snipeTarget));
+
+  const sort = $("sort").value;
+  results.sort((a, b) => {
+    if (sort === "profit") return (currentMode === "bid" ? b.bidProfit-a.bidProfit : b.snipeProfit-a.snipeProfit) || b.rating-a.rating;
+    if (sort === "roi") return (currentMode === "bid" ? b.bidROI-a.bidROI : b.snipeROI-a.snipeROI) || b.rating-a.rating;
+    if (sort === "price") return (currentMode === "bid" ? a.bidTarget-b.bidTarget : a.snipeTarget-b.snipeTarget) || b.rating-a.rating;
+    return b.rating-a.rating || a.market-b.market;
+  });
+
+  renderResults(results.slice(0, limit), results.length);
+  renderCheapOpportunities(ranked, available, maxPrice, minRating, limit);
+  if (selectedPlayerKey) renderRoute();
+}
+
+function renderResults(list, total) {
+  const isSnipe = currentMode === "snipe";
+  $("resultsTitle").textContent = isSnipe ? "⚡ Objetivos de sniping" : "🎯 Pujas recomendadas";
+  $("resultsSubtitle").textContent = isSnipe
+    ? "Cartas cuyo objetivo de compra cabe en tu presupuesto."
+    : "Cartas con un objetivo de puja dentro de tu presupuesto.";
+  $("modeDescription").textContent = isSnipe
+    ? "Busca compras inmediatas por debajo del precio de mercado."
+    : "Calcula pujas objetivo para intentar comprar por debajo del mercado.";
+  $("activeCount").textContent = total;
+
+  const best = list.length ? profitFor(list[0]) : NaN;
+  $("bestProfit").textContent = Number.isFinite(best) ? coins(best) : "—";
+
+  if (!list.length) {
+    $("activeResults").innerHTML = `<div class="empty">No hay jugadores con esa media y presupuesto.<br>Prueba a bajar la media mínima o aumentar el presupuesto.</div>`;
+    return;
   }
 
-  function calculateCheapOpportunities() {
-    const container = $("cheapOpportunities");
-    if (!container || !Array.isArray(players) || !players.length) return;
+  $("activeResults").innerHTML = list.map((p, i) => {
+    const target = targetFor(p);
+    const profit = profitFor(p);
+    const roi = isSnipe ? p.snipeROI : p.bidROI;
+    const commission = Math.floor(p.sellPrice * TAX);
+    return `
+      <article class="player" tabindex="0" role="button" data-player-key="${escapeHTML(playerKey(p))}" aria-label="Seleccionar ${escapeHTML(p.name)} y abrir hoja de ruta">
+        <div class="player-top">
+          <div><h3>${escapeHTML(p.name)}</h3><div class="tag">#${i+1} · ${isSnipe ? "SNIPE" : "PUJA"}</div></div>
+          <div class="rating">${escapeHTML(p.rating)} GRL</div>
+        </div>
+        <div class="metrics">
+          <div class="metric"><small>Precio de mercado</small><strong>${coins(p.market)}</strong></div>
+          <div class="metric"><small>${isSnipe ? "Compra objetivo" : "Puja objetivo"}</small><strong class="green">${coins(target)}</strong></div>
+          <div class="metric"><small>Precio de venta</small><strong>${coins(p.sellPrice)}</strong></div>
+          <div class="metric"><small>Comisión del 5 %</small><strong>${coins(commission)}</strong></div>
+          <div class="metric"><small>Beneficio neto estimado</small><strong class="${profit >= 0 ? "profit" : "red"}">${coins(profit)}</strong></div>
+          <div class="metric"><small>Rentabilidad estimada</small><strong>${roi.toFixed(1).replace(".", ",")}%</strong></div>
+        </div>
+        <div class="card-foot">
+          ${p.hasForecast ? "El precio de venta utiliza la previsión disponible." : "Sin previsión válida: se usa el precio de mercado como venta estimada."}
+          <br><strong>Selecciona esta tarjeta para ver la hoja de ruta.</strong>
+        </div>
+      </article>`;
+  }).join("");
+}
 
-    const available = Math.max(0, num("budget") - num("reserve"));
-    const maxPrice = num("maxPrice", num("budget"));
-    const minRating = num("minRating");
-    const limit = num("limit", 30);
+function renderCheapOpportunities(ranked, available, maxPrice, minRating, limit) {
+  const cheapLimit = Math.min(10000, maxPrice, available);
+  const candidates = ranked.map(p => ({
+    ...p,
+    target: targetFor(p),
+    usage: usageInfo(p),
+    sale: salePrice(p)
+  })).filter(p =>
+    p.rating >= minRating && p.target > 0 &&
+    p.target <= cheapLimit && p.target <= available
+  );
 
-    // Umbral orientativo de precio bajo, configurable mediante
-    // el presupuesto y el límite de compra que ya existen.
-    const cheapLimit = Math.min(10000, maxPrice, available);
+  candidates.sort((a, b) =>
+    Number(b.usage.verified) - Number(a.usage.verified) ||
+    a.target - b.target ||
+    profitFor(b) - profitFor(a)
+  );
 
-    const candidates = players.map(p => {
-      const market = p.price;
-      const discount = Math.min(90, Math.max(
-        1,
-        num(currentMode === "bid" ? "discount" : "snipeDiscount", 10)
-      ));
-      const target = roundDown(market * (1 - discount / 100));
-      const sale = getSalePrice(p);
-      const profit = Math.floor(sale * (1 - TAX)) - target;
+  const results = candidates.slice(0, limit);
+  if (!results.length) {
+    $("cheapResults").innerHTML = `<div class="empty">No hay jugadores baratos compatibles con estos filtros. Prueba a aumentar el presupuesto o reducir la media mínima.</div>`;
+    return;
+  }
 
-      return {
-        ...p,
-        target,
-        sale,
-        profit,
-        usageInfo: getUsageInfo(p)
-      };
-    }).filter(p =>
-      p.rating >= minRating &&
-      p.target > 0 &&
-      p.target <= cheapLimit &&
-      p.target <= available
-    );
+  $("cheapResults").innerHTML = results.map(p => {
+    const profit = Math.floor(p.sale * (1 - TAX)) - p.target;
+    return `
+      <article class="player" tabindex="0" role="button" data-player-key="${escapeHTML(playerKey(p))}" aria-label="Seleccionar ${escapeHTML(p.name)} y abrir hoja de ruta">
+        <div class="player-top">
+          <div><h3>${escapeHTML(p.name)}</h3><div class="tag">💎 ECONÓMICO</div><div class="tag">${escapeHTML(p.usage.text)}</div></div>
+          <div class="rating">${escapeHTML(p.rating)} GRL</div>
+        </div>
+        <div class="metrics">
+          <div class="metric"><small>Compra recomendada</small><strong class="green">${coins(p.target)}</strong></div>
+          <div class="metric"><small>Precio de mercado</small><strong>${coins(p.price)}</strong></div>
+          <div class="metric"><small>Venta estimada</small><strong>${coins(p.sale)}</strong></div>
+          <div class="metric"><small>Beneficio por carta</small><strong class="${profit > 0 ? "profit" : "red"}">${coins(profit)}</strong></div>
+        </div>
+        <div class="card-foot">Pulsa para calcular tu plan de inversión.</div>
+      </article>`;
+  }).join("");
+}
 
-    // Primero los datos de uso disponibles; después, los precios bajos
-    // y el beneficio estimado. No se inventan cifras de popularidad.
-    candidates.sort((a, b) =>
-      Number(b.usageInfo.verified) - Number(a.usageInfo.verified) ||
-      a.target - b.target ||
-      b.profit - a.profit
-    );
+function selectPlayer(key) {
+  selectedPlayerKey = key;
+  renderRoute();
+  $("routePanel").hidden = false;
+  $("routePanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
-    const results = candidates.slice(0, limit);
+function renderRoute() {
+  if (!selectedPlayerKey) return;
+  const p = players.find(item => playerKey(item) === selectedPlayerKey);
+  if (!p) return;
 
-    if (!results.length) {
-      container.innerHTML = `
-        <div class="empty">
-          No hay oportunidades baratas con los filtros actuales.
-          Prueba a aumentar el presupuesto o reducir la media mínima.
-        </div>`;
-      return;
+  const budget = num("budget");
+  const reserve = num("reserve");
+  const available = Math.max(0, budget - reserve);
+  const maxPrice = num("maxPrice", budget);
+  const target = targetFor(p);
+  const sell = salePrice(p);
+  const validTarget = target > 0 && target <= maxPrice;
+  const quantity = validTarget ? Math.floor(available / target) : 0;
+  const cost = quantity * target;
+  const remaining = available - cost;
+  const gross = quantity * sell;
+  const totalCommission = Math.floor(sell * TAX) * quantity;
+  const netRevenue = gross - totalCommission;
+  const totalProfit = netRevenue - cost;
+  const roi = cost > 0 ? totalProfit / cost * 100 : 0;
+
+  $("routePlayer").textContent = `${p.name} · ${p.rating} GRL · ${currentMode === "bid" ? "Modo Pujas" : "Modo Sniping"}`;
+
+  const stats = [
+    ["Presupuesto total", moneyText(budget)],
+    ["Monedas reservadas", moneyText(reserve)],
+    ["Presupuesto disponible", moneyText(available)],
+    ["Precio objetivo por carta", moneyText(target)],
+    ["Cartas que puedes comprar", quantity.toLocaleString("es-ES")],
+    ["Coste total de compra", moneyText(cost)],
+    ["Monedas restantes", moneyText(remaining)],
+    ["Venta estimada por carta", moneyText(sell)],
+    ["Ingresos brutos totales", moneyText(gross)],
+    ["Comisión total del 5 %", moneyText(totalCommission)],
+    ["Ingresos netos de venta", moneyText(netRevenue)],
+    ["Beneficio neto total", moneyText(totalProfit)],
+    ["Rentabilidad estimada", roi.toFixed(2).replace(".", ",") + " %"]
+  ];
+
+  $("routeSummary").innerHTML = stats.map(([label, value]) => `
+    <div class="stat"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong></div>
+  `).join("");
+
+  let warning = "";
+  if (!validTarget) warning = "El precio objetivo supera el límite por jugador o no es válido.";
+  else if (quantity === 0) warning = "Tu presupuesto disponible no alcanza para comprar una carta a ese precio.";
+  else if (totalProfit <= 0) warning = "Atención: con estos precios, la operación no ofrece beneficio neto positivo.";
+
+  $("routeSteps").innerHTML = `
+    <div class="route-step">
+      <h3>1. Preparar la inversión</h3>
+      <p>Presupuesto utilizable: <strong>${moneyText(available)}</strong></p>
+      <p>Monedas reservadas: <strong>${moneyText(reserve)}</strong></p>
+    </div>
+    <div class="route-step">
+      <h3>2. Comprar o pujar</h3>
+      <p>Operación: ${currentMode === "bid" ? "Pujas" : "Sniping"}.</p>
+      <p>Precio máximo recomendado por carta: <strong>${moneyText(target)}</strong></p>
+      <p>Número de cartas: <strong>${quantity}</strong></p>
+      <p>Coste total: <strong>${moneyText(cost)}</strong></p>
+      <p>Saldo restante: <strong>${moneyText(remaining)}</strong></p>
+    </div>
+    <div class="route-step">
+      <h3>3. Vender todas las cartas</h3>
+      <p>Precio de venta estimado por carta: <strong>${moneyText(sell)}</strong></p>
+      <p>Ingresos brutos: <strong>${moneyText(gross)}</strong></p>
+      <p>Comisión total: <strong>${moneyText(totalCommission)}</strong></p>
+      <p>Ingresos netos: <strong>${moneyText(netRevenue)}</strong></p>
+    </div>
+    <div class="route-step">
+      <h3>4. Resultado final</h3>
+      <p>Capital invertido: <strong>${moneyText(cost)}</strong></p>
+      <p>Beneficio neto estimado: <strong class="${totalProfit > 0 ? "route-highlight green" : "red"}">${moneyText(totalProfit)}</strong></p>
+      <p>Rentabilidad estimada: <strong>${roi.toFixed(2).replace(".", ",")} %</strong></p>
+      ${warning ? `<p class="red">${escapeHTML(warning)}</p>` : ""}
+    </div>`;
+}
+function moneyText(n) { return coins(n); }
+
+async function refreshPrices() {
+  const button = $("refresh");
+  button.disabled = true;
+  $("status").textContent = "Consultando fuente de precios…";
+
+  try {
+    const response = await fetch(API_URL, { cache: "no-store" });
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    const data = await response.json();
+    players = normalizePlayers(data);
+
+    if (!players.length) throw new Error("La respuesta no contiene jugadores reconocibles con precios.");
+
+    const updated = data && data.updated
+      ? new Date(data.updated).toLocaleString("es-ES")
+      : "hora no indicada";
+    $("status").textContent = `${players.length} jugadores cargados. Actualización indicada por la fuente: ${updated}.`;
+
+    if (selectedPlayerKey && !players.some(p => playerKey(p) === selectedPlayerKey)) {
+      selectedPlayerKey = null;
+      $("routePanel").hidden = true;
     }
-
-    container.innerHTML = results.map(p => {
-      const usage = p.usageInfo;
-
-      return `
-        <article class="player" tabindex="0" role="button"
-          data-player-id="${safe(p.eaId ?? p.id ?? "")}"
-          data-player-name="${safe(p.name)}"
-          data-player-rating="${p.rating}"
-          aria-label="Ver hoja de ruta de ${safe(p.name)}">
-          <div class="player-top">
-            <div>
-              <h3>${safe(p.name)}</h3>
-              <span class="tag">💎 PRECIO BAJO</span>
-              <div class="tag">${safe(usage.text)}</div>
-            </div>
-            <div class="rating">${safe(p.rating)} GRL</div>
-          </div>
-          <div class="metrics">
-            <div class="metric">
-              <small>Compra recomendada</small>
-              <strong class="green">${money(p.target)}</strong>
-            </div>
-            <div class="metric">
-              <small>Precio de mercado</small>
-              <strong>${money(p.price)}</strong>
-            </div>
-            <div class="metric">
-              <small>Venta estimada</small>
-              <strong>${money(p.sale)}</strong>
-            </div>
-            <div class="metric">
-              <small>Beneficio por carta</small>
-              <strong class="${p.profit > 0 ? "profit" : "red"}">
-                ${money(p.profit)}
-              </strong>
-            </div>
-          </div>
-          <div class="card-foot">
-            Pulsa para calcular tu plan de inversión.
-          </div>
-        </article>`;
-    }).join("");
+    calculateRecommendations();
+  } catch (error) {
+    $("status").textContent = "No se pudieron cargar los precios: " + error.message +
+      ". Comprueba la URL, el formato de respuesta y los permisos CORS.";
+  } finally {
+    button.disabled = false;
   }
+}
 
-  function findPlayer(card) {
-    const id = card.dataset.playerId;
-    const name = card.dataset.playerName;
-    const rating = Number(card.dataset.playerRating);
+$("modeSnipe").addEventListener("click", () => {
+  currentMode = "snipe";
+  $("modeSnipe").classList.add("active");
+  $("modeBid").classList.remove("active");
+  calculateRecommendations();
+});
+$("modeBid").addEventListener("click", () => {
+  currentMode = "bid";
+  $("modeBid").classList.add("active");
+  $("modeSnipe").classList.remove("active");
+  calculateRecommendations();
+});
 
-    return players.find(p =>
-      id && String(p.eaId ?? p.id ?? "") === id
-    ) || players.find(p =>
-      p.name === name && p.rating === rating
-    );
-  }
+$("refresh").addEventListener("click", refreshPrices);
+$("recalculate").addEventListener("click", calculateRecommendations);
+$("closeRoute").addEventListener("click", () => {
+  $("routePanel").hidden = true;
+});
 
-  function selectPlayer(p) {
-    if (!p) return;
+["budget", "reserve", "minRating", "maxPrice", "discount", "snipeDiscount", "sort", "limit"].forEach(id => {
+  $(id).addEventListener("input", calculateRecommendations);
+  $(id).addEventListener("change", calculateRecommendations);
+});
 
-    selectedPlayer = p;
-    renderRoute();
+function cardSelectionHandler(event) {
+  const card = event.target.closest(".player[data-player-key]");
+  if (card) selectPlayer(card.dataset.playerKey);
+}
+function cardKeyboardHandler(event) {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const card = event.target.closest(".player[data-player-key]");
+  if (!card) return;
+  event.preventDefault();
+  selectPlayer(card.dataset.playerKey);
+}
+$("activeResults").addEventListener("click", cardSelectionHandler);
+$("cheapResults").addEventListener("click", cardSelectionHandler);
+$("activeResults").addEventListener("keydown", cardKeyboardHandler);
+$("cheapResults").addEventListener("keydown", cardKeyboardHandler);
 
-    $("routePanel").hidden = false;
-    $("routePanel").scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
-  }
-
-  function renderRoute() {
-    if (!selectedPlayer) return;
-
-    // Busca la versión más reciente del jugador si se actualizaron precios.
-    const p = players.find(item =>
-      String(item.eaId ?? item.id ?? "") ===
-      String(selectedPlayer.eaId ?? selectedPlayer.id ?? "")
-    ) || players.find(item =>
-      item.name === selectedPlayer.name &&
-      item.rating === selectedPlayer.rating
-    ) || selectedPlayer;
-
-    selectedPlayer = p;
-
-    const budget = num("budget");
-    const reserve = num("reserve");
-    const available = Math.max(0, budget - reserve);
-    const maxPrice = num("maxPrice", budget);
-    const target = getTarget(p);
-    const sell = getSalePrice(p);
-    const commissionPerCard = Math.floor(sell * TAX);
-
-    const validTarget = target > 0 && target <= maxPrice;
-    const quantity = validTarget
-      ? Math.floor(available / target)
-      : 0;
-
-    const cost = quantity * target;
-    const remaining = available - cost;
-    const gross = quantity * sell;
-    const totalCommission = quantity * commissionPerCard;
-    const netRevenue = gross - totalCommission;
-    const totalProfit = netRevenue - cost;
-    const roi = cost > 0 ? totalProfit / cost * 100 : 0;
-
-    $("routePlayer").textContent =
-      `${p.name} · ${p.rating} GRL · ` +
-      `${currentMode === "bid" ? "Modo Pujas" : "Modo Sniping"}`;
-
-    const stats = [
-      ["Presupuesto total", money(budget)],
-      ["Monedas reservadas", money(reserve)],
-      ["Presupuesto disponible", money(available)],
-      ["Precio objetivo por carta", money(target)],
-      ["Cartas que puedes comprar", quantity.toLocaleString("es-ES")],
-      ["Coste total de compra", money(cost)],
-      ["Monedas restantes", money(remaining)],
-      ["Venta estimada por carta", money(sell)],
-      ["Ingresos brutos totales", money(gross)],
-      ["Comisión total del 5 %", money(totalCommission)],
-      ["Ingresos netos de venta", money(netRevenue)],
-      ["Beneficio neto total", money(totalProfit)],
-      ["Rentabilidad estimada", roi.toFixed(2).replace(".", ",") + " %"]
-    ];
-
-    $("routeSummary").innerHTML = stats.map(([label, value]) => `
-      <div class="stat">
-        <small>${safe(label)}</small>
-        <strong>${safe(value)}</strong>
-      </div>
-    `).join("");
-
-    let warning = "";
-
-    if (!validTarget) {
-      warning = "El precio objetivo supera tu límite por jugador o no es válido.";
-    } else if (quantity === 0) {
-      warning = "Tu presupuesto disponible no alcanza para comprar una carta a ese precio.";
-    } else if (totalProfit <= 0) {
-      warning = "Atención: con estos precios, la operación no ofrece beneficio neto positivo.";
-    }
-
-    $("routeSteps").innerHTML = `
-      <div class="route-step">
-        <h3>1. Preparar la inversión</h3>
-        <p>Presupuesto utilizable: <strong>${money(available)}</strong></p>
-        <p>Reserva que mantienes intacta: <strong>${money(reserve)}</strong></p>
-      </div>
-      <div class="route-step">
-        <h3>2. Comprar o pujar</h3>
-        <p>Operación: ${currentMode === "bid" ? "puja" : "sniping"}.</p>
-        <p>Precio máximo recomendado por carta: <strong>${money(target)}</strong></p>
-        <p>Número de cartas: <strong>${quantity}</strong></p>
-        <p>Inversión total: <strong>${money(cost)}</strong></p>
-        <p>Saldo disponible restante: <strong>${money(remaining)}</strong></p>
-      </div>
-      <div class="route-step">
-        <h3>3. Poner todas las cartas a la venta</h3>
-        <p>Precio estimado por carta: <strong>${money(sell)}</strong></p>
-        <p>Ingresos brutos: <strong>${money(gross)}</strong></p>
-        <p>Comisiones del mercado: <strong>${money(totalCommission)}</strong></p>
-        <p>Ingresos netos tras las comisiones: <strong>${money(netRevenue)}</strong></p>
-      </div>
-      <div class="route-step">
-        <h3>4. Resultado final</h3>
-        <p>Capital invertido: <strong>${money(cost)}</strong></p>
-        <p>Beneficio neto previsto:
-          <strong class="${totalProfit > 0 ? "route-highlight" : "red"}">
-            ${money(totalProfit)}
-          </strong>
-        </p>
-        <p>Rentabilidad: <strong>${roi.toFixed(2).replace(".", ",")} %</strong></p>
-        ${warning ? `<p class="red">${safe(warning)}</p>` : ""}
-      </div>`;
-  }
-
-  // Hace seleccionables las tarjetas originales sin sustituir su renderizado.
-  function handleCardClick(event) {
-    const card = event.target.closest(".player");
-    if (!card) return;
-
-    const p = findPlayer(card);
-    if (p) selectPlayer(p);
-  }
-
-  $("activeResults").addEventListener("click", handleCardClick);
-  $("cheapOpportunities").addEventListener("click", handleCardClick);
-
-  function handleCardKeyboard(event) {
-    if (event.key !== "Enter" && event.key !== " ") return;
-
-    const card = event.target.closest(".player[role='button']");
-    if (!card) return;
-
-    event.preventDefault();
-    const p = findPlayer(card);
-    if (p) selectPlayer(p);
-  }
-
-  $("cheapOpportunities").addEventListener("keydown", handleCardKeyboard);
-
-  $("closeRoute").addEventListener("click", () => {
-    $("routePanel").hidden = true;
-  });
-
-  // Mantiene accesibles las tarjetas del listado original.
-  const observer = new MutationObserver(() => {
-    $("activeResults").querySelectorAll(".player").forEach(card => {
-      card.setAttribute("tabindex", "0");
-      card.setAttribute("role", "button");
-      card.setAttribute("aria-label", "Seleccionar jugador para ver la hoja de ruta");
-    });
-  });
-
-  observer.observe($("activeResults"), { childList: true });
-
-  // Actualiza la sección adicional cuando cambian los filtros.
-  [
-    "budget", "reserve", "minRating", "maxPrice",
-    "discount", "snipeDiscount", "sort", "limit"
-  ].forEach(id => {
-    $(id).addEventListener("input", () => {
-      calculateCheapOpportunities();
-      if (selectedPlayer) renderRoute();
-    });
-    $(id).addEventListener("change", () => {
-      calculateCheapOpportunities();
-      if (selectedPlayer) renderRoute();
-    });
-  });
-
-  $("modeSnipe").addEventListener("click", () => {
-    calculateCheapOpportunities();
-    if (selectedPlayer) renderRoute();
-  });
-
-  $("modeBid").addEventListener("click", () => {
-    calculateCheapOpportunities();
-    if (selectedPlayer) renderRoute();
-  });
-
-  $("refresh").addEventListener("click", () => {
-    // refreshPrices es asíncrona; esperar a que termine para leer
-    // los nuevos precios cargados.
-    Promise.resolve().then(async () => {
-      // El evento original también inicia la actualización.
-      // Este listener solo actualiza las oportunidades después.
-      const original = refreshPrices;
-      await original();
-      calculateCheapOpportunities();
-      if (selectedPlayer) renderRoute();
-    });
-  });
-
-  // Primera actualización y compatibilidad con los datos que ya existan.
-  calculateCheapOpportunities();
-  if (selectedPlayer) renderRoute();
-})();
+refreshPrices();
 </script>
 </body>
 </html>
+'''
+
+path = Path("/mnt/data/fc_trade_lab_completo.html")
+path.write_text(html, encoding="utf-8")
+print(f"Archivo creado: {path}")
 
